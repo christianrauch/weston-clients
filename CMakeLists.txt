@@ -34,6 +34,7 @@ endmacro(gen_std_proto)
 gen_std_proto("stable/xdg-shell/xdg-shell" xdg-shell-client-protocol)
 gen_std_proto("unstable/pointer-constraints/pointer-constraints-unstable-v1" pointer-constraints-unstable-v1-client-protocol)
 gen_std_proto("unstable/relative-pointer/relative-pointer-unstable-v1" relative-pointer-unstable-v1-client-protocol)
+gen_std_proto("unstable/text-input/text-input-unstable-v1" text-input-unstable-v1-client-protocol)
 
 gen_proto(${CMAKE_CURRENT_SOURCE_DIR}"/protocol/text-cursor-position" text-cursor-position-client-protocol)
 
@@ -57,7 +58,7 @@ include_directories(${pixman_INCLUDE_DIRS})
 pkg_check_modules(pangocairo REQUIRED pangocairo)
 include_directories(${pangocairo_INCLUDE_DIRS})
 
-add_library(ttk window.c ${PROT_SOURCES} shared/xalloc.c shared/os-compatibility.c shared/config-parser.c shared/frame.c shared/file-util.c)
+add_library(ttk window.c ${PROT_SOURCES} shared/xalloc.c shared/os-compatibility.c shared/config-parser.c shared/frame.c shared/file-util.c shared/cairo-util.c)
 target_link_libraries(ttk ${wayland-client_LIBRARIES} ${cairo_LIBRARIES} ${pixman_LIBRARIES} -lm ${wayland-cursor_LIBRARIES} ${xkbcommon_LIBRARIES} ${pangocairo_LIBRARIES})
 
 ## examples
@@ -68,11 +69,14 @@ find_package(JPEG REQUIRED)
 pkg_check_modules(webp REQUIRED libwebp)
 include_directories(${webp_INCLUDE_DIRS})
 
-add_library(image_utils shared/image-loader.c shared/cairo-util.c)
+add_library(image_utils shared/image-loader.c)
 target_link_libraries(image_utils PNG::PNG ${JPEG_LIBRARIES} ${webp_LIBRARIES})
 
-add_executable(image image.c )
+add_executable(image image.c)
 target_link_libraries(image ttk image_utils)
 
 add_executable(terminal terminal.c shared/option-parser.c)
 target_link_libraries(terminal ttk image_utils -lutil)
+
+add_executable(editor editor.c shared/option-parser.c)
+target_link_libraries(editor ttk image_utils)
