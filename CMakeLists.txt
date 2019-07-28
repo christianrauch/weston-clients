@@ -3,7 +3,6 @@ project(weston-clients)
 
 include_directories(.)
 include_directories(shared)
-include_directories(/usr/include/cairo/)
 
 include(FindPkgConfig)
 
@@ -15,45 +14,61 @@ pkg_get_variable(WAYLAND_PROTOCOLS_DIR wayland-protocols pkgdatadir)
 # find 'wayland-scanner' executable
 pkg_get_variable(WAYLAND_SCANNER wayland-scanner wayland_scanner)
 
-# xdg-shell
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/xdg-shell-client-protocol.h
-    COMMAND ${WAYLAND_SCANNER} client-header "${WAYLAND_PROTOCOLS_DIR}/stable/xdg-shell/xdg-shell.xml" xdg-shell-client-protocol.h)
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/xdg-shell-protocol.c
-    COMMAND ${WAYLAND_SCANNER} private-code "${WAYLAND_PROTOCOLS_DIR}/stable/xdg-shell/xdg-shell.xml" xdg-shell-protocol.c
-    DEPENDS xdg-shell-client-protocol.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
-list(APPEND PROT_SOURCES xdg-shell-protocol.c)
 
-# text-input-unstable-v3
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/text-cursor-position-client-protocol.h
-    COMMAND ${WAYLAND_SCANNER} client-header "${WAYLAND_PROTOCOLS_DIR}/unstable/text-input/text-input-unstable-v3.xml" text-cursor-position-client-protocol.h)
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/text-cursor-position-client-protocol.c
-    COMMAND ${WAYLAND_SCANNER} private-code "${WAYLAND_PROTOCOLS_DIR}/unstable/text-input/text-input-unstable-v3.xml" text-cursor-position-client-protocol.c
-    DEPENDS text-cursor-position-client-protocol.h)
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-list(APPEND PROT_SOURCES text-cursor-position-client-protocol.c)
+macro(gen_proto DEF NAME)
+    add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${NAME}.h
+        COMMAND ${WAYLAND_SCANNER} client-header "${DEF}.xml" ${NAME}.h)
+    add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${NAME}.c
+        COMMAND ${WAYLAND_SCANNER} private-code "${DEF}.xml" ${NAME}.c
+        DEPENDS ${NAME}.h)
+    list(APPEND PROT_SOURCES ${NAME}.c)
+endmacro(gen_proto)
 
-# pointer-constraints-unstable-v1-client-protocol
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pointer-constraints-unstable-v1-client-protocol.h
-    COMMAND ${WAYLAND_SCANNER} client-header "${WAYLAND_PROTOCOLS_DIR}/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml" pointer-constraints-unstable-v1-client-protocol.h)
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pointer-constraints-unstable-v1-client-protocol.c
-    COMMAND ${WAYLAND_SCANNER} private-code "${WAYLAND_PROTOCOLS_DIR}/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml" pointer-constraints-unstable-v1-client-protocol.c
-    DEPENDS pointer-constraints-unstable-v1-client-protocol.h)
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-list(APPEND PROT_SOURCES pointer-constraints-unstable-v1-client-protocol.c)
+macro(gen_std_proto DEF NAME)
+    gen_proto("${WAYLAND_PROTOCOLS_DIR}/${DEF}" ${NAME})
+endmacro(gen_std_proto)
 
+gen_std_proto("stable/xdg-shell/xdg-shell" xdg-shell-client-protocol)
+gen_std_proto("unstable/pointer-constraints/pointer-constraints-unstable-v1" pointer-constraints-unstable-v1-client-protocol)
+gen_std_proto("unstable/relative-pointer/relative-pointer-unstable-v1" relative-pointer-unstable-v1-client-protocol)
 
-##
-add_library(ttk window.c ${PROT_SOURCES})
+gen_proto(${CMAKE_CURRENT_SOURCE_DIR}"/protocol/text-cursor-position" text-cursor-position-client-protocol)
 
+## toolkit library
 
-add_executable(image image.c)
+pkg_check_modules(wayland-client REQUIRED wayland-client)
+include_directories(${wayland-client_INCLUDE_DIRS})
 
-target_link_libraries(image -lcairo)
+pkg_check_modules(wayland-cursor REQUIRED wayland-cursor)
+include_directories(${wayland-cursor_INCLUDE_DIRS})
+
+pkg_check_modules(xkbcommon REQUIRED xkbcommon)
+include_directories(${xkbcommon_INCLUDE_DIRS})
+
+pkg_check_modules(cairo REQUIRED cairo)
+include_directories(${cairo_INCLUDE_DIRS})
+
+pkg_check_modules(pixman REQUIRED pixman-1)
+include_directories(${pixman_INCLUDE_DIRS})
+
+pkg_check_modules(pangocairo REQUIRED pangocairo)
+include_directories(${pangocairo_INCLUDE_DIRS})
+
+add_library(ttk window.c ${PROT_SOURCES} shared/config-parser.c shared/cairo-util.c shared/os-compatibility.c shared/xalloc.c shared/frame.c shared/file-util.c)
+target_link_libraries(ttk ${wayland-client_LIBRARIES} ${cairo_LIBRARIES} ${pixman_LIBRARIES} -lm ${wayland-cursor_LIBRARIES} ${xkbcommon_LIBRARIES} ${pangocairo_LIBRARIES})
+
+## examples
+
+find_package(PNG REQUIRED)
+find_package(JPEG REQUIRED)
+
+pkg_check_modules(webp REQUIRED libwebp)
+include_directories(${webp_INCLUDE_DIRS})
+
+add_executable(image image.c shared/image-loader.c)
+
 target_link_libraries(image ttk)
+target_link_libraries(image PNG::PNG ${JPEG_LIBRARIES} ${webp_LIBRARIES})
