@@ -80,3 +80,10 @@ target_link_libraries(editor ttk)
 
 add_executable(clickdot clickdot.c)
 target_link_libraries(clickdot ttk)
+
+find_package(OpenGL COMPONENTS EGL)
+pkg_check_modules(wayland-egl REQUIRED wayland-egl)
+include_directories(${wayland-egl_INCLUDE_DIRS})
+
+add_executable(simple-egl simple-egl.c)
+target_link_libraries(simple-egl ttk OpenGL::EGL ${wayland-egl_LIBRARIES})
