@@ -68,7 +68,11 @@ find_package(JPEG REQUIRED)
 pkg_check_modules(webp REQUIRED libwebp)
 include_directories(${webp_INCLUDE_DIRS})
 
-add_executable(image image.c shared/image-loader.c shared/cairo-util.c)
+add_library(image_utils shared/image-loader.c shared/cairo-util.c)
+target_link_libraries(image_utils PNG::PNG ${JPEG_LIBRARIES} ${webp_LIBRARIES})
 
-target_link_libraries(image ttk)
-target_link_libraries(image PNG::PNG ${JPEG_LIBRARIES} ${webp_LIBRARIES})
+add_executable(image image.c )
+target_link_libraries(image ttk image_utils)
+
+add_executable(terminal terminal.c shared/option-parser.c)
+target_link_libraries(terminal ttk image_utils -lutil)
