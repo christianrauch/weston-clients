@@ -57,7 +57,7 @@ include_directories(${pixman_INCLUDE_DIRS})
 pkg_check_modules(pangocairo REQUIRED pangocairo)
 include_directories(${pangocairo_INCLUDE_DIRS})
 
-add_library(ttk window.c ${PROT_SOURCES} shared/config-parser.c shared/cairo-util.c shared/os-compatibility.c shared/xalloc.c shared/frame.c shared/file-util.c)
+add_library(ttk window.c ${PROT_SOURCES} shared/xalloc.c shared/os-compatibility.c shared/config-parser.c shared/frame.c shared/file-util.c)
 target_link_libraries(ttk ${wayland-client_LIBRARIES} ${cairo_LIBRARIES} ${pixman_LIBRARIES} -lm ${wayland-cursor_LIBRARIES} ${xkbcommon_LIBRARIES} ${pangocairo_LIBRARIES})
 
 ## examples
@@ -68,7 +68,7 @@ find_package(JPEG REQUIRED)
 pkg_check_modules(webp REQUIRED libwebp)
 include_directories(${webp_INCLUDE_DIRS})
 
-add_executable(image image.c shared/image-loader.c)
+add_executable(image image.c shared/image-loader.c shared/cairo-util.c)
 
 target_link_libraries(image ttk)
 target_link_libraries(image PNG::PNG ${JPEG_LIBRARIES} ${webp_LIBRARIES})
